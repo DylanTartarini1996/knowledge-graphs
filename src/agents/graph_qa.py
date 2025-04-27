@@ -4,10 +4,22 @@ from langchain_core.messages import BaseMessage
 from langchain_neo4j.chains.graph_qa.cypher import GraphCypherQAChain
 
 from src.config import LLMConf
-from src.graph.graph_queries import get_adjacent_chunks, get_mentioned_entities, filter_graph_by_communities
+from src.graph.graph_queries import (
+    get_adjacent_chunks, 
+    get_chunk_element_id, 
+    get_mentioned_entities, 
+    filter_graph_by_communities,
+    project_temporary_subgraph
+)
 from src.graph.knowledge_graph import KnowledgeGraph
 from src.factory.llm import fetch_llm
-from src.prompts.graph_qa import get_qa_prompt_with_subgraph, get_question_answering_prompt, get_rephrase_prompt, get_summarization_prompt
+from src.prompts.graph_qa import (
+    get_qa_prompt_with_subgraph, 
+    get_question_answering_prompt, 
+    get_rephrase_prompt, 
+    get_summarization_prompt,
+    get_cypher_prompt
+)
 from src.schema import Chunk
 from src.utils.logger import get_logger
 
@@ -33,19 +45,21 @@ class GraphAgentResponder:
         self.cypher_llm = fetch_llm(cypher_llm_conf)
         self.qa_prompt = get_question_answering_prompt()
         self.qa_prompt_with_subgraph = get_qa_prompt_with_subgraph()
-
+        self.cypher_prompt = get_cypher_prompt()
         self.summarize_prompt = get_summarization_prompt()
 
         self.graph_qa_chain = GraphCypherQAChain.from_llm(
             qa_llm=self.qa_llm, 
             cypher_llm=self.cypher_llm,
-            graph=self.graph, 
+            graph=self.graph,
             verbose=True,
             allow_dangerous_requests=True,
             validate_cypher=True, 
             return_intermediate_steps=True
         )
+        
         self.rephrase_llm = None
+        
         if rephrase_llm_conf:
             self.rephrase_llm = fetch_llm(rephrase_llm_conf)
             self.rephrase_prompt = get_rephrase_prompt()
@@ -86,6 +100,84 @@ class GraphAgentResponder:
         except Exception as e:
             logger.warning(f"Problem Answering with CYPHER chain: {e}")
             
+            
+    def answer_with_enhanced_cypher(
+        self,
+        query: str, 
+        intermediate_steps: bool=False, 
+        history: str=None
+        ) -> str | Tuple[str, list]:
+        """ 
+        """
+        if self.rephrase_llm:
+            try: 
+                rephrased_question = self.rephrase_llm.invoke(input=self.rephrase_prompt.format(question=query, history=history)).content
+                logger.info(f"Rephrased Question: {rephrased_question}")
+            except Exception as e:
+                logger.warning(f"Failed to rephrase user question with exception: {e}")
+                rephrased_question = None
+        else:
+            rephrased_question = None
+        
+        try:
+            context_docs = self.graph.vector_store.similarity_search(query=rephrased_question if rephrased_question is not None else query)
+        except Exception as e:
+            logger.warning(f"Failed to retrieve context with exception: {e}")
+            context_docs = []
+    
+        chunk_ids = [] #elementId of each chunk 
+        
+        for doc in context_docs:
+            current_chunk = Chunk(
+                chunk_id=doc.metadata["chunk_id"],
+                text=doc.page_content,
+                filename=doc.metadata["filename"]
+            )
+            with self.graph._driver.session() as session:
+                element_id = get_chunk_element_id(session, current_chunk)
+                session.close()
+            
+            if element_id is not None:    
+                chunk_ids.append(element_id)
+                
+        with self.graph._driver.session() as query_session:
+            # generate temporary graph
+            project_temporary_subgraph(query_session, element_ids=chunk_ids, n_hops=2, graph_name="tempGraph")
+        
+            # uses prompt 
+            graph_qa_chain = GraphCypherQAChain.from_llm(
+                qa_llm=self.qa_llm, 
+                cypher_llm=self.cypher_llm,
+                cypher_prompt=self.cypher_prompt,
+                graph=self.graph, 
+                # include_types=["Chunk", "Document", "__Entity__", "PART_OF", "NEXT", "MENTIONS"],
+                verbose=True,
+                allow_dangerous_requests=True,
+                validate_cypher=True, 
+                return_intermediate_steps=True
+            )
+            
+            # try:
+            graph_qa_output = graph_qa_chain._call(
+                inputs={
+                    "query": rephrased_question, 
+                    "temp_graph_name": "tempGraph"
+                } if rephrased_question is not None else {
+                    "query": query, 
+                    "temp_graph_name": "tempGraph"
+                }
+            )
+            # except Exception as e:
+                # logger.warning(f"Problem Answering with CYPHER chain: {e}")
+            
+            # temporary graph will vanish here 
+            query_session.close()
+        
+        if intermediate_steps:
+            return graph_qa_output["result"], graph_qa_output["intermediate_steps"]
+        else: 
+            return graph_qa_output["result"]
+        
             
     def answer_with_context(
         self, 

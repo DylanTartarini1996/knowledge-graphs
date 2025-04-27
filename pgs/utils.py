@@ -12,7 +12,7 @@ SOURCE_FOLDER = f"{os.getcwd()}/source_docs"
 
 @st.cache_data
 def get_configuration_from_env() -> Configuration:
-    env = load_dotenv('config_example.env')
+    env = load_dotenv('config.env')
     if env:
         conf = Configuration(
             database=KnowledgeGraphConfig(

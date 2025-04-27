@@ -145,7 +145,7 @@ if prompt := st.chat_input("What are the available nodes in the Graph?"):
             history=chat_history
         )
     elif st.session_state["answer_method"] == "Cypher":
-        response = responder.answer_with_cypher(
+        response = responder.answer_with_enhanced_cypher(
             query=prompt, 
             intermediate_steps=False,
             history=chat_history

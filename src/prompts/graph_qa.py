@@ -27,7 +27,37 @@ def get_question_answering_prompt() -> PromptTemplate:
     template.input_variables = ["history", "question", "context"]
     
     return template
+
+
+def get_cypher_prompt() -> PromptTemplate:
+    prompt = """ 
+        You are a Cypher expert.
+
+        The user question refers to a specific subgraph called '{temp_graph_name}' which is a temporary in-memory GDS projection.
+
+        RULES:
+        - NEVER use MATCH (n) syntax.
+        - ONLY use GDS Cypher procedures such as:
+            - gds.graph.nodeProperty.stream
+            - gds.graph.relationshipProperty.stream
+            - gds.pageRank.stream
+            - gds.nodeSimilarity.stream
+        - The graph you can query is: {temp_graph_name}
+        - Be concise and efficient.
+
+        Question:
+        {query}
+
+        Write the Cypher query to answer it.
+
+    """
     
+    template = PromptTemplate.from_template(prompt)
+    
+    template.input_variables = ["query", "temp_graph_name"]
+    
+    return template
+
 
 def get_rephrase_prompt() -> PromptTemplate:
 

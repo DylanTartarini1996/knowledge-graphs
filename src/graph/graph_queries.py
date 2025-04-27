@@ -199,3 +199,59 @@ def filter_graph_by_communities(session: Session, community_ids: List[int], comm
     except Exception as e:
         print(f"Error while fetching subgraph: {e}")
         return []
+    
+    
+def project_temporary_subgraph(session: Session, element_ids: List[str], n_hops: int=2, graph_name: str="tempGraph"):
+    """ 
+    Projects a temporary subgraph into Neo4j, based on elementIds from Chunks.  
+    The temporary subgraph will disappear after the connection is closed or lost. 
+    
+    **WARNING**: this only works if your Neo4j instance is abilitated to use `gds` procedures
+    """
+    
+    
+    node_query = f"""
+        UNWIND $element_ids AS eid
+        MATCH (c:Chunk)
+        WHERE elementId(c) = eid
+        WITH collect(c) AS chunks
+        UNWIND chunks AS c
+        MATCH (c)-[*1..{n_hops}]-(e)
+        RETURN id(c) AS id, labels(c) AS labels
+        UNION
+        RETURN id(e) AS id, labels(e) AS labels
+    """
+
+    rel_query = f"""
+        UNWIND $element_ids AS eid
+        MATCH (c:Chunk)
+        WHERE elementId(c) = eid
+        WITH collect(c) AS chunks
+        UNWIND chunks AS c
+        MATCH (c)-[r*1..{n_hops}]-(e)
+        UNWIND r AS rel
+        RETURN id(startNode(rel)) AS source, id(endNode(rel)) AS target, type(rel) AS type
+    """
+
+    session.run(
+        """
+        CALL gds.graph.project(
+            $graph_name,
+            {
+              nodeProjection: $node_query
+            },
+            {
+              relationshipProjection: $rel_query
+            },
+            {
+              validateRelationships: false
+            }
+        )
+        """,
+        {
+            "graph_name": graph_name,
+            "node_query": node_query,
+            "rel_query": rel_query,
+            "element_ids": element_ids
+        }
+    )
