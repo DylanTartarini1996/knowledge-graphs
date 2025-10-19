@@ -3,7 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.api.dtos.request_chat import ChatRequestDto
 from src.api.dtos.response_chat import ChatResponseDto
-from src.api.dtos.user_chats import UserChat, UserChatsResponseDto
+from src.api.dtos.response_user_chats import UserChat, UserChatsResponseDto
 from src.api.exceptions.api import ApiException
 from src.api.factory.database import get_db_async
 from src.api.services.chat import ChatService
