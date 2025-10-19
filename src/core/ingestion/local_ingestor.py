@@ -2,7 +2,7 @@ import os
 from typing import List, Tuple
 
 from src.config import Source
-from src.ingestion.ingestor import Ingestor
+from src.core.ingestion.ingestor import Ingestor
 
 
 class LocalIngestor(Ingestor):

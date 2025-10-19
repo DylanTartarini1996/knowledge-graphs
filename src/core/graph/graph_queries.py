@@ -2,8 +2,8 @@ from typing import Any, Dict, List, Optional, Tuple
 import networkx as nx
 from neo4j import Query, Session
 
-from src.graph.graph_model import Node, Relationship, Community, CommunityReport
-from src.graph.knowledge_graph import KnowledgeGraph
+from src.core.graph.graph_model import Node, Relationship, Community, CommunityReport
+from src.core.graph.knowledge_graph import KnowledgeGraph
 from src.schema import Chunk
 from src.utils.logger import get_logger
 

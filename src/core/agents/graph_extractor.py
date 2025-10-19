@@ -1,13 +1,10 @@
-from src.utils.logger import get_logger
 from typing import Optional
 
-# from langchain_neo4j.graphs.graph_document import Relationship, Node
-from langchain.schema import Document
+from langchain_core.language_models.chat_models import BaseChatModel
 
-from src.factory.llm import fetch_llm
-from src.config import LLMConf
-from src.graph.graph_model import Ontology, _Graph
-from src.prompts.graph_extractor import get_graph_extractor_prompt
+from src.core.graph.graph_model import Ontology, _Graph
+from src.core.prompts.graph_extractor import get_graph_extractor_prompt
+from src.utils.logger import get_logger
 
 
 logger = get_logger(__name__)
@@ -17,9 +14,8 @@ class GraphExtractor:
     """ Agent able to extract informations in a graph representation format from a given text.
     """
 
-    def __init__(self, conf: LLMConf, ontology: Optional[Ontology]=None):
-        self.conf = conf
-        self.llm = fetch_llm(conf)
+    def __init__(self, llm: BaseChatModel, ontology: Optional[Ontology]=None):
+        self.llm = llm
         self.prompt = get_graph_extractor_prompt()
 
         self.prompt.partial_variables = {

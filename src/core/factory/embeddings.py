@@ -1,7 +1,7 @@
+from langchain_core.embeddings import Embeddings
 from langchain_huggingface.embeddings import HuggingFaceEmbeddings
 from langchain_ollama.embeddings import OllamaEmbeddings
 from langchain_openai.embeddings import OpenAIEmbeddings, AzureOpenAIEmbeddings
-from typing import Union
 
 from src.config import EmbedderConf
 from src.utils.logger import get_logger
@@ -10,13 +10,9 @@ from src.utils.logger import get_logger
 logger = get_logger(__name__)
 
 
-def get_embeddings(conf: EmbedderConf) -> Union[
-    HuggingFaceEmbeddings, 
-    OllamaEmbeddings, 
-    OpenAIEmbeddings, 
-    AzureOpenAIEmbeddings, 
-    None
-    ]:
+# TODO CONDITIONAL IMPORTS HERE
+
+def get_embeddings(conf: EmbedderConf) -> Embeddings:
 
         if conf.type == "ollama":
             embeddings = OllamaEmbeddings(

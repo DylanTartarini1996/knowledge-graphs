@@ -1,10 +1,11 @@
-from src.utils.logger import get_logger
 from typing import List, Optional
 
-from src.agents.graph_extractor import GraphExtractor
-from src.graph.graph_model import _Graph, Ontology, map_to_lc_graph
-from src.config import LLMConf
+from langchain_core.language_models.chat_models import BaseChatModel
+
+from src.core.agents.graph_extractor import GraphExtractor
+from src.core.graph.graph_model import _Graph, Ontology, map_to_lc_graph
 from src.schema import ProcessedDocument
+from src.utils.logger import get_logger
 
 logger = get_logger(__name__)
 
@@ -12,11 +13,11 @@ logger = get_logger(__name__)
 class GraphMiner:
     """ Contains methods to mine graphs from a (list of) `ProcessedDocument`."""
 
-    def __init__(self, conf: LLMConf, ontology: Optional[Ontology]=None):
-        self.graph_extractor = GraphExtractor(conf=conf, ontology=ontology)
+    def __init__(self, llm: BaseChatModel, ontology: Optional[Ontology]=None):
+        self.graph_extractor = GraphExtractor(llm=llm, ontology=ontology)
 
         if self.graph_extractor:
-            logger.info(f"GraphMiner initialized.")
+            logger.info(f"✅ GraphMiner initialized.")
 
 
     def mine_graph_from_doc_chunks(self, doc: ProcessedDocument) -> ProcessedDocument:
@@ -36,7 +37,7 @@ class GraphMiner:
             except Exception as e:
                 logger.warning(f"Error while mining graph: {e}")
 
-            logger.info(f"Created a graph representation for {len(doc.chunks)} chunks.")
+            logger.info(f"✅ Created a graph representation for {len(doc.chunks)} chunks.")
         
         return doc
 

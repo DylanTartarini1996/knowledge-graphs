@@ -1,0 +1,1 @@
+""" Core source code for Knowledge Graph's Project"""

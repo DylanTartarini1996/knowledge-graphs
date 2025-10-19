@@ -9,8 +9,8 @@ from neo4j import ManagedTransaction
 from typing import List, Optional
 
 from src.config import KnowledgeGraphConfig
-from src.graph.graph_model import Community, CommunityReport
-from src.graph.graph_ds import (
+from src.core.graph.graph_model import Community, CommunityReport
+from src.core.graph.graph_ds import (
     build_update_query,
     compute_centralities, 
     detect_leiden_communities, 
@@ -110,6 +110,15 @@ class KnowledgeGraph(Neo4jGraph):
             refresh_schema=refresh_schema,
             enhanced_schema=enhanced_schema
         )
+
+        if not self._driver.verify_connectivity():
+            logger.error("❌ Check your Neo4j Configuration!")
+            raise ConnectionError("Check your Neo4j Configuration!")
+
+        if not self._driver.verify_authentication():
+            logger.error("❌ Check your Neo4j Credentials!")
+            raise Exception("Check your Neo4j Configuration!")
+
         
 
     @property

@@ -1,14 +1,14 @@
-from typing import List, Optional, Any, Dict, Tuple
+from typing import List, Optional, Any, Dict, Tuple, Union
 
 from langchain_core.messages import BaseMessage
 from langchain_neo4j.chains.graph_qa.cypher import GraphCypherQAChain
 
 from src.config import LLMConf
-from src.graph.graph_queries import get_adjacent_chunks, get_mentioned_entities, filter_graph_by_communities
-from src.graph.knowledge_graph import KnowledgeGraph
-from src.factory.llm import fetch_llm
-from src.prompts.graph_qa import get_qa_prompt_with_subgraph, get_question_answering_prompt, get_rephrase_prompt, get_summarization_prompt
-from src.schema import Chunk
+from src.core.graph.graph_queries import get_adjacent_chunks, get_mentioned_entities, filter_graph_by_communities
+from src.core.graph.knowledge_graph import KnowledgeGraph
+from src.core.factory.llm import fetch_llm
+from src.core.prompts.graph_qa import get_qa_prompt_with_subgraph, get_question_answering_prompt, get_rephrase_prompt, get_summarization_prompt
+from src.schema import ChatMode, Chunk, Message
 from src.utils.logger import get_logger
 
 
@@ -20,6 +20,8 @@ class GraphAgentResponder:
     Agent powered by up to three LLMs, is able to answer a user's question
     navigating the `KnowledgeGraph` via Cypher Queries as well as via Vector Search.
     """
+
+    # TODO update this agent to be aware of history, be able to rephrase according to it and answer based on a modality
 
     def __init__(
         self, 
@@ -53,16 +55,41 @@ class GraphAgentResponder:
                 "graph_labels": self.graph.labels,
                 "graph_relationships": self.graph.relationships
             }
+
+    @staticmethod
+    def parse_context(chunks: List[Chunk]) -> str:
+        # TODO 
+        context = ""
+        # parse context in a meaningful way
+        return context 
+    
+    
+
+    def rephrase_question(self, history: List[Message], chat_mode: ChatMode) -> str:
+        """ 
+        Rephrase the user's query giving the history of the conversation 
+        and the chat mode to be employed when aswering the query 
+        """
+        rephrased_question = ""
+        # TODO 
+        return rephrased_question
             
         
     def answer_with_cypher(
         self, 
         query: str, 
         intermediate_steps: bool=False, 
-        history: str=None
-        ) -> str | Tuple[str, List]:
+        ) -> str | Tuple[str, Union[list, None]]:
         """ 
         Uses only the Cypher chain to answer the user's question.
+
+        -------
+        params:
+        -------
+        - `query`: `str`
+            The query to be answered
+        - `intermediate_steps`: `bool`
+            Whether to return the intermediate steps from the thought process of the LLM
         """
         
         if self.rephrase_llm:
@@ -87,19 +114,23 @@ class GraphAgentResponder:
             logger.warning(f"Problem Answering with CYPHER chain: {e}")
             
             
-    def answer_with_context(
-        self, 
-        query: str, 
-        use_adjacent_chunks: bool=False, 
-        history: str=None
-        )-> str:
+    def answer_with_context(self, query: str, use_adjacent_chunks: bool=False) -> Tuple[str, List[Chunk]]:
         """ 
         Uses only vanilla RAG to answer the user's question.  
-        If `use_adjacent_chunks=True` will query the graph for additional context 
-        compared to the Chunks retrieved by the similarity search. Latency will be higher due to expanded context. 
+        If `use_adjacent_chunks=True` will query the graph for additional context  
+        compared to the Chunks retrieved by the similarity search.  
+
+        Latency will be higher due to expanded context. 
+
+        --------
+        returns:
+        --------
+        - `Tuple[str, List[Chunk] | None]`
+            Answer and list of text chunks used by the LLM to provide the answer
         """
         context = ""
-        
+        chunks = []
+        # TODO use history here
         try:
             context_docs = self.graph.vector_store.similarity_search(query=query)
         except Exception as e:
@@ -118,43 +149,59 @@ class GraphAgentResponder:
                 with self.graph._driver.session() as session:
                     prev_chunk, current_chunk, next_chunk = get_adjacent_chunks(session, current_chunk)
                     session.close()
+
+                chunks.extend([prev_chunk, current_chunk, next_chunk])
                 
-                context += f"\n {prev_chunk.text}" if prev_chunk is not None else ""
-                context += f"\n {current_chunk.text}"
-                context += f"\n {next_chunk.text}" if next_chunk is not None else ""
+            # TODO 
+            context = self.parse_context(chunks)
+
         else: 
             for doc in context_docs:
+
                 context += f"\n {doc.page_content}"
             
         answer: BaseMessage = self.qa_llm.invoke(
             input=self.qa_prompt.format(
-                history=history,
-                question=query, 
+                question=query,  # TODO 
                 context=context
             )
         )
 
-        return answer.content
+        return answer.content, chunks
     
     
     def answer_with_community_reports(
         self, 
         query: str, 
         use_adjacent_chunks: bool=False, 
-        community_type: str="leiden",
-        history: str=None
-        ) -> str: 
+        community_type: str="leiden"
+        ) -> Tuple[str, List[Chunk]]: 
         """ 
         Queries two vector indexes to get the user's answer out of an ensemble of contexts:
             1. one made of a list of `CommunityReport`
             2. one made of a list of `Chunk` from the same communities of the reports. 
             
         If `use_adjacent_chunks=True` will query the graph for additional context 
-        compared to the Chunks retrieved by the similarity search. Latency will be higher due to expanded context. 
+        compared to the Chunks retrieved by the similarity search. Latency will be higher 
+        due to expanded context. 
+        
+        --------
+        params:
+        --------
+        - `query`: `str`
+            The query to be answered
+        - `use_adjacent_chunks`: `bool`
+            Whether to use chunks adjacent to the ones retrieved to answer the query
+        - `community_type`: `str`
+            The community type to look for in the graph; available types are `louvain` and `leiden`.
+        
+        --------
+        returns:
+        --------
+        - `Tuple[str, List[Chunk] | None]`
+            Answer and list of text chunks used by the LLM to provide the answer
         """
-        
-        context = ""
-        
+        # TODO specialize parsing context depending on the chat modality 
         try:
             reports_and_scores = self.graph.cr_store.similarity_search_with_relevance_scores(
                 query=query, 
@@ -211,20 +258,20 @@ class GraphAgentResponder:
         answer: BaseMessage = self.qa_llm.invoke(
             input=self.qa_prompt.format(
                 question=query, 
-                context=context, 
-                history=history
+                context=context
             )
         )
-        
-        return answer.content
+
+        # TODO extend list of chunks
+        chunks = []
+        return answer.content, chunks
             
         
     def answer_with_community_subgraph(
         self, 
         query: str, 
         community_type: str = "leiden",
-        history: str = None
-        ) -> str: 
+        ) -> Tuple[str, List[Chunk]]: 
         """ 
         Answers after querying for communities:  
         
@@ -233,9 +280,25 @@ class GraphAgentResponder:
         * follow the MENTIONS relationship of each Chunk and obtain a dictionary 
         * fetch the community subgraph under the form of another dictionary 
         * passes the dictionaries + the report to a reconciler agent to decide how to answer 
+
+        -------
+        params:
+        -------
+        - `query`: `str`
+            The query to be answered
+        - `community_type`: `str`
+            The community type to look for in the graph; available types are `louvain` and `leiden`.
+        
+        --------
+        returns:
+        --------
+        - `Tuple[str, List[Chunk] | None]`
+            Answer and list of text chunks used by the LLM to provide the answer
         """
         context = ""
-        
+
+        # TODO parse content specifically to chat mode
+
         try:
             reports = self.graph.cr_store.similarity_search(
                 query=query, 
@@ -301,30 +364,42 @@ class GraphAgentResponder:
             input=self.qa_prompt_with_subgraph.format(
                 question=query, 
                 context=context, 
-                history=history
             )
         )
         
-        return answer.content
+        chunks = [] # TODO extend chunks 
+
+        return answer.content, chunks
 
 
-    def answer(
+    def combined_answer(
         self, 
         query: str, 
         use_adjacent_chunks: bool=False, 
-        filter:Optional[Dict[str, Any]]=None,
-        history: str = None
-        ) -> str:
+        filter: Optional[Dict[str, Any]]=None,
+        ) -> Tuple[str, List[Chunk]]:
         """ 
         Answers the user query performing text generation after having retrieved
         context both via Vector Search and Cypher Queries. 
         Results from both this methods are synthetized in a comprehensive answer.
 
-        If a configuration is provided for the rephrasing LLM, it will be used 
-        to rephrase the user's query according to the `KnowledgeGraph` schema. 
+        -------
+        params:
+        -------
+        - `query`: `str`
+            The query to be answered
+        - `use_adjacent_chunks`: `bool`
+            Whether to use chunks adjacent to the ones retrieved to answer the query
+        - `filter`: ` Optional[Dict[str, Any]]`
+            Optional filtering map
+        --------
+        returns:
+        --------
+        - `Tuple[str, List[Chunk] | None]`
+            Answer and list of text chunks used by the LLM to provide the answer
         """
         context = ""
-        
+        # TODO parse context
         try:
             context_docs = self.graph.vector_store.similarity_search(query=query, filter=filter)
         except Exception as e:
@@ -359,12 +434,86 @@ class GraphAgentResponder:
         
         final_answer: BaseMessage = self.qa_llm.invoke(
             input=self.summarize_prompt.format(
-                history=history,
                 question=query, 
                 retrieved_context=context, 
                 query_result=cypher_steps
             )
         )
 
-        return final_answer.content
+        chunks = [] # TODO extend list of chunks
+
+        return final_answer.content, chunks
+    
+
+
+    def get_answer(
+        self, 
+        query: str, 
+        chat_mode: ChatMode, 
+        chat_history: Optional[List[Message]] = []
+        ) -> Tuple[str, Union[List[Chunk] | None]]:
+        """ 
+        Gets an answer to the user's query with a given Chat Mode. 
+
+        --------
+        params:
+        --------
+        - `query`: `str`. 
+            The input from the user
+        - `chat_mode`: `ChatMode`  
+            The chat mode to employ when answering the user's query
+        - `history`: `Optional[List[Message]]`. 
+            The history of the conversation, when available. Used to rephrase the query depending on chat mode        
+        --------
+        returns:
+        --------
+        - `Tuple[str, List[Chunk] | None]`
+            Answer and list of text chunks used by the LLM to provide the answer
+        """
+
+        if len(chat_history) > 0: 
+            rephrased_question = self.rephrase_question(chat_history, chat_mode)
+
+        chunks = None
+
+        if chat_mode == ChatMode.SIMILARITY:
+            answer, chunks = self.answer_with_context(
+                query=rephrased_question if rephrased_question else query, 
+                use_adjacent_chunks=True
+            )
+
+        elif chat_mode == ChatMode.CYPHER:
+            answer = self.answer_with_cypher(
+                query=rephrased_question if rephrased_question else query,
+                intermediate_steps=False
+            )
+
+        elif chat_mode == ChatMode.COMMUNITIES:
+            answer, chunks = self.answer_with_community_reports(
+                query=rephrased_question if rephrased_question else query,
+                use_adjacent_chunks=True,
+                community_type="leiden"
+            )
+
+        elif chat_mode == ChatMode.SUBGRAPH:
+            answer, chunks = self.answer_with_community_subgraph(
+                query=rephrased_question if rephrased_question else query,
+                community_type="leiden"
+            )
+        elif chat_mode == ChatMode.COMBINE:
+            answer, chunks = self.combined_answer(
+                query=rephrased_question if rephrased_question else query,
+                use_adjacent_chunks=True
+            )
+
+        return answer, chunks
+        
+
+
+
+
+
+
+
+
         

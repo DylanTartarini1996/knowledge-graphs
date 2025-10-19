@@ -5,7 +5,7 @@ from enum import Enum
 from pydantic import BaseModel
 from typing import Optional
 
-from src.graph.graph_model import Ontology
+from src.core.graph.graph_model import Ontology
 
 
 logger = get_logger(__name__)
@@ -87,6 +87,31 @@ class EmbedderConf(BaseModel):
     api_version: Optional[str] = None
 
 
+class DBConfig(BaseModel):
+    """ 
+    Configuration for the backend Database used for memory management.
+
+    -----------
+    attributes:
+    -----------
+    `password`: `str`
+    `host`: `str`
+    `port`: `int`
+    `user`: `str`
+    `password`: `str`
+    `database`: `str`
+    `timeout`: `int`
+    `url`: `str`
+    """
+    password: Optional[str] = None
+    host: Optional[str] = None
+    port: Optional[int] = None
+    user: Optional[str] = None
+    database: Optional[str] = None
+    timeout: int=5000
+    url: Optional[str] = None
+
+
 class KnowledgeGraphConfig(BaseModel):
     """
     Configuration for the backend Database for the Knowledge Base.  
@@ -108,8 +133,8 @@ class KnowledgeGraphConfig(BaseModel):
     `uri`: `str`
     """
     password: str
-    db_schema :  Optional[str] = None
-    host_name:  Optional[str] = None
+    db_schema : Optional[str] = None
+    host_name: Optional[str] = None
     port:  Optional[int] = None
     user: Optional[str] = None
     database: Optional[str] = None
@@ -128,14 +153,16 @@ class Configuration(BaseModel):
     -----------
     attributes:
     -----------
-    `kb_database`: configuration to access the Graph Database
+    `graph_database`: configuration to access the Graph Database
+    `rel_database`: configuration to access the Relational Database
     `document_source`: configuration storing informations on where to fetch documents from
     `re_model_conf`: configuration for the LLM in charge of extracting relationships from documents
     `embedder_conf`: configuration for the Embeddings model that will create vectors out of documents
     `summarizer_conf`: configuration for the LLM in charge of summarizing communities out of Chunks and other nodes
     `qa_model`: configuration for the Q&A model (LLM) that will interact with the user
     """
-    database: KnowledgeGraphConfig
+    graph_database: KnowledgeGraphConfig
+    rel_database: DBConfig
     chunker_conf: Optional[ChunkerConf] = None
     source_conf: Optional[Source] = None
     re_model_conf: Optional[LLMConf] = None
