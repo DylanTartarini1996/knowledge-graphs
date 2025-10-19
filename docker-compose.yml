@@ -48,9 +48,9 @@ services:
     volumes:
       - pg_data:/var/lib/postgresql/data
     environment:
-      - POSTGRES_USER: myuser
-      - POSTGRES_PASSWORD: mypassword
-      - POSTGRES_DB: mydb
+      - POSTGRES_USER=myuser
+      - POSTGRES_PASSWORD=mypassword
+      - POSTGRES_DB=mydb
     
   ollama:
     build:
