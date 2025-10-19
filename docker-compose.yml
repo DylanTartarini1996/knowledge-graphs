@@ -38,7 +38,20 @@ services:
       - neo4j_data:/data
     networks:
       - graphnet
-
+  
+  postgres: 
+    image: postgres:15
+    container_name: postgres
+    restart: always
+    ports:
+      - "5432:5432"
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_USER: myuser
+      - POSTGRES_PASSWORD: mypassword
+      - POSTGRES_DB: mydb
+    
   ollama:
     build:
       context: .
@@ -54,6 +67,7 @@ services:
 volumes:
   neo4j_data:
   ollama_models:
+  pg_data: 
 
 networks:
   graphnet:
