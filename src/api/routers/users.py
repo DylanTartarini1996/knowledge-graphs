@@ -5,11 +5,11 @@ from src.api.dtos.request_create_user import CreateUserRequestDto
 from src.api.dtos.response_create_user import CreateUserResponseDto
 from src.api.dtos.response_users import AllUsersResponseDto
 from src.api.exceptions.api import ApiException
-from src.api.factory.database import get_db_async
 from src.api.models.users import User
 from src.api.services.users import UserService
 from src.config import Configuration
-from src.core.factory.configuration import get_configuration_from_env
+from src.factory.configuration import get_configuration_from_env
+from src.factory.database import get_db_async
 
 
 CONFIGURATION_PATH = "config_example.env"

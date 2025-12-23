@@ -162,7 +162,7 @@ class Configuration(BaseModel):
     `qa_model`: configuration for the Q&A model (LLM) that will interact with the user
     """
     graph_database: KnowledgeGraphConfig
-    rel_database: DBConfig
+    rel_database: Optional[DBConfig] = None
     chunker_conf: Optional[ChunkerConf] = None
     source_conf: Optional[Source] = None
     re_model_conf: Optional[LLMConf] = None

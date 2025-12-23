@@ -1,14 +1,15 @@
 import asyncio
+from typing import Annotated, Any
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.api.dtos.request_upload import UploadFilesRequestDto
 from src.api.dtos.response_upload import UploadFilesResponseDto
-from src.api.factory.database import get_db_async
+from src.factory.database import get_db_async
 from src.api.services.ingestion import IngestionService
 from src.config import Configuration
-from src.core.factory.configuration import get_configuration_from_env
-from src.core.factory.graph import get_knowledge_graph
+from src.factory.configuration import get_configuration_from_env
+from src.factory.graph import get_knowledge_graph
 from src.core.graph.knowledge_graph import KnowledgeGraph
 from src.utils.logger import get_logger
 
@@ -24,8 +25,8 @@ router = APIRouter(prefix="/files", tags=["files"])
 @router.post(f"upload")
 async def upload_file(
     upload_request: UploadFilesRequestDto, 
-    kg: KnowledgeGraph = Depends(get_knowledge_graph(conf.graph_database)), 
-    db: AsyncSession = Depends(get_db_async(conf.rel_database))
+    kg: Annotated[Any, Depends(get_knowledge_graph(conf.graph_database, embedder_conf=conf.embedder_conf))], 
+    db: Annotated[AsyncSession, Depends(lambda: get_db_async(conf.rel_database))]
     ) -> UploadFilesResponseDto:
     """ 
     Receives an upload request with files specification and tracks it into a queue of file to be ingested.  
