@@ -4,6 +4,7 @@ from dotenv import load_dotenv
 from src.config import (
     ChunkerConf,
     Configuration, 
+    DBConfig, 
     EmbedderConf, 
     KnowledgeGraphConfig, 
     LLMConf, 
@@ -20,13 +21,24 @@ def get_configuration_from_env(env_file: str) -> Configuration:
     
     if env:
         conf = Configuration(
-            database=KnowledgeGraphConfig(
+            graph_database=KnowledgeGraphConfig(
                 uri=os.getenv("NEO4J_URI"),
                 user=os.getenv("NEO4J_USERNAME"),
                 password=os.getenv("NEO4J_PASSWORD"),
                 index_name=os.getenv("INDEX_NAME")
             ),
-            source_conf=Source(folder=os.getenv("SOURCE_FOLDER")),
+            rel_database=DBConfig(
+                password=os.getenv("POSTGRES_PASSWORD"),
+                host=os.getenv("DB_HOST"),
+                port=os.getenv("DB_PORT"), 
+                user=os.getenv("POSTGRES_USER"),
+                database=os.getenv("POSTGRES_DB"),
+                timeout=os.getenv("DB_TIMEOUT"),
+                url=os.getenv("DB_URL", None)
+            ),
+            source_conf=Source(
+                folder=f"{os.getcwd()}/{os.getenv("SOURCE_FOLDER")}"
+            ),
             chunker_conf=ChunkerConf(
                 type=os.getenv("CHUNKER_TYPE"), 
                 chunk_size=os.getenv("CHUNKER_CHUNK_SIZE"), 

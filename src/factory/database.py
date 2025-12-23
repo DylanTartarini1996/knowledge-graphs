@@ -1,17 +1,18 @@
 from typing import AsyncGenerator
 
 from contextlib import asynccontextmanager
-from dotenv import load_dotenv
 from urllib.parse import quote_plus
 from sqlalchemy import text
-from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker,AsyncSession
+from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
 
 from src.config import DBConfig
 from src.api.models import Base 
+from src.api.models.chats import Chat
+from src.api.models.users import User
+from src.factory.configuration import get_configuration_from_env
 from src.utils.logger import get_logger
 
-
-load_dotenv("config.env")
+CONFIGURATION_PATH = "config_example.env"
 logger = get_logger(__name__)
 
 
@@ -46,30 +47,35 @@ class DatabaseFactory:
             await conn.run_sync(Base.metadata.create_all)
 
 
-    def get_db_url(self)-> str:
+    def get_db_url(self) -> str:
         """Generate database URL with proper URL encoding and validation"""
         
-        # Validate required parameters
+        # 1. Validate required parameters (Ensure none are None)
         if not all([self.user, self.password, self.host, self.port, self.database]):
-            logger.error("❌ Invalid DB configuration")
-            
-        # URL encode the password and username to handle special characters
-        encoded_user = quote_plus(self.user)
-        encoded_password = quote_plus(self.password)
+            logger.error("❌ Invalid DB configuration - one or more fields are missing")
+            # Consider raising an exception here to stop execution early
+            raise ValueError("Missing database configuration environment variables")
+
+        # 2. URL encode to handle special characters (@, :, /, etc.)
+        encoded_user = quote_plus(str(self.user))
+        encoded_password = quote_plus(str(self.password))
         
         try:
-            # Validate port is a valid integer
+            # 3. Validate port
             port = int(self.port)
-            if port <= 0 or port > 65535:
+            if not (0 < port <= 65535):
                 raise ValueError("Port must be between 1 and 65535")
         except ValueError as e:
-            logger.error(f"❌ Invalid DB port: {port}")
-            
-        return f"mysql+aiomysql://{encoded_user}:{encoded_password}@{self.host}:{port}/{self.database}" # TODO change to PostGre
+            logger.error(f"❌ Invalid DB port: {self.port}")
+            raise
+
+        # 4. Return PostgreSQL formatted URL
+        url = f"postgresql+asyncpg://{encoded_user}:{encoded_password}@{self.host}:{port}/{self.database}"
+        logger.info(f"Connecting to Postgres at {self.host}:{port} using database: {self.database}")
+        return url
 
 
-
-db_config = DBConfig()
+db_config = get_configuration_from_env(CONFIGURATION_PATH).rel_database
 database_factory = DatabaseFactory(db_config)
 
 
