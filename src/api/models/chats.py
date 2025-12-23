@@ -13,8 +13,7 @@ class Chat(Base):
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     chat_id = Column(Integer, nullable=True)
     history = Column(JSONB, nullable=False)   # JSON field for message history
-    created_at = Column(DateTime, default=datetime.now(timezone.utc))
-    updated_at = Column(DateTime, default=datetime.now(timezone.utc), onupdate=datetime.now(timezone.utc))
+    created_at = Column(DateTime, default=datetime.now)
+    updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
 
-    # relationship to User table (if exists)
-    user = relationship("User", back_populates="chats")
+    users = relationship("User", back_populates="chats")

@@ -1,11 +1,11 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 
-from src.api.factory.database import initialize_database
 from src.api.routers import chats, files, health 
+from src.factory.database import initialize_database
 
 
-KNOWLEDGE_GRAPH_APP = "knowledge-graph"
+KNOWLEDGE_GRAPH_APP = "/knowledge-graph"
 
 
 @asynccontextmanager
@@ -24,5 +24,5 @@ app = FastAPI(
 )
 
 app.include_router(router=health.router, prefix=KNOWLEDGE_GRAPH_APP)
-app.include_router(prefix=chats.router, prefix=KNOWLEDGE_GRAPH_APP)
-app.include_router(prefix=files.router, prefix=KNOWLEDGE_GRAPH_APP)
+app.include_router(router=chats.router, prefix=KNOWLEDGE_GRAPH_APP)
+app.include_router(router=files.router, prefix=KNOWLEDGE_GRAPH_APP)
