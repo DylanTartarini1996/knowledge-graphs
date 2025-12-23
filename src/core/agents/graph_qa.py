@@ -6,8 +6,8 @@ from langchain_neo4j.chains.graph_qa.cypher import GraphCypherQAChain
 from src.config import LLMConf
 from src.core.graph.graph_queries import get_adjacent_chunks, get_mentioned_entities, filter_graph_by_communities
 from src.core.graph.knowledge_graph import KnowledgeGraph
-from src.core.factory.llm import fetch_llm
 from src.core.prompts.graph_qa import get_qa_prompt_with_subgraph, get_question_answering_prompt, get_rephrase_prompt, get_summarization_prompt
+from src.factory.llm import fetch_llm
 from src.schema import ChatMode, Chunk, Message
 from src.utils.logger import get_logger
 

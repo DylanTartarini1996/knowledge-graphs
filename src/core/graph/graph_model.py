@@ -5,8 +5,8 @@ import pandas as pd
 from typing import List, Dict, Any, Optional
 from pydantic import BaseModel, ConfigDict
 
-from langchain.schema import Document
-from langchain.load.serializable import Serializable
+from langchain_core.documents import Document
+from langchain_core.load.serializable import Serializable
 from langchain_neo4j.graphs.graph_document import Node, Relationship, GraphDocument
 
 from src.schema import Chunk

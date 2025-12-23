@@ -1,6 +1,6 @@
 from typing import List
 
-from langchain.text_splitter import RecursiveCharacterTextSplitter, TextSplitter
+from langchain_text_splitters import RecursiveCharacterTextSplitter, TextSplitter
 from src.utils.logger import get_logger
 
 from src.config import ChunkerConf

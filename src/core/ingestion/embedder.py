@@ -1,7 +1,7 @@
 from typing import List
 
 from src.config import EmbedderConf
-from src.core.factory.embeddings import get_embeddings
+from src.factory.embeddings import get_embeddings
 from src.schema import ProcessedDocument
 from src.utils.logger import get_logger
 

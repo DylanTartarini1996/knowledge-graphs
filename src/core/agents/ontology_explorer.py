@@ -3,7 +3,7 @@ import random
 from src.utils.logger import get_logger
 from typing import Optional, List
 
-from src.core.factory.llm import fetch_llm
+from src.factory.llm import fetch_llm
 from src.config import LLMConf
 from src.core.graph.graph_model import Ontology
 from src.core.prompts.ontology_explorer import get_ontology_creation_prompt

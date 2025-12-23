@@ -1,7 +1,7 @@
 from typing import List
 from src.core.graph.knowledge_graph import KnowledgeGraph
-from src.core.factory.embeddings import get_embeddings
-from src.core.factory.llm import fetch_llm
+from src.factory.embeddings import get_embeddings
+from src.factory.llm import fetch_llm
 from src.config import LLMConf, EmbedderConf
 from src.core.graph.graph_model import Community, CommunityReport
 from src.core.prompts.communities import get_summarize_community_prompt

@@ -1,4 +1,4 @@
-from langchain.prompts import PromptTemplate
+from langchain_core.prompts import PromptTemplate
 
 def get_graph_extractor_prompt()-> PromptTemplate:
     """ 

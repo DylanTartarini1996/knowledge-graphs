@@ -1,4 +1,4 @@
-from langchain.prompts import PromptTemplate
+from langchain_core.prompts import PromptTemplate
 
 def get_ontology_creation_prompt()-> PromptTemplate:
     """ 
