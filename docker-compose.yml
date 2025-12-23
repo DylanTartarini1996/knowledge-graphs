@@ -4,12 +4,15 @@ services:
   app:
     build: .
     ports:
-      - "8080:8080"
+      - "8000:8000"
     env_file:
       - config_example.env
     depends_on:
-      - neo4j
-      - ollama
+      neo4j:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      
     volumes:
       - .:/app
     networks:
@@ -33,11 +36,15 @@ services:
       - NEO4J_apoc_import_file_enabled=true
       - NEO4J_apoc_meta_enabled=true
       - NEO4J_apoc_export_file_enabled=true
-      
     volumes:
       - neo4j_data:/data
     networks:
       - graphnet
+    healthcheck:
+      test: ["CMD", "cypher-shell", "-u", "neo4j", "-p", "password123", "RETURN 1"]
+      interval: 10s
+      timeout: 10s
+      retries: 10
   
   postgres: 
     image: postgres:15
@@ -51,22 +58,29 @@ services:
       - POSTGRES_USER=myuser
       - POSTGRES_PASSWORD=mypassword
       - POSTGRES_DB=mydb
-    
-  ollama:
-    build:
-      context: .
-      dockerfile: ollama.Dockerfile
-    container_name: ollama
-    ports:
-      - "11434:11434"
-    volumes:
-      - ollama_models:/root/.ollama
     networks:
       - graphnet
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U myuser -d mydb"] # Check both user AND db
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    
+  # ollama:
+  #   build:
+  #     context: .
+  #     dockerfile: ollama.Dockerfile
+  #   container_name: ollama
+  #   ports:
+  #     - "11434:11434"
+  #   volumes:
+  #     - ollama_models:/root/.ollama
+  #   networks:
+  #     - graphnet
 
 volumes:
   neo4j_data:
-  ollama_models:
+  # ollama_models:
   pg_data: 
 
 networks:
