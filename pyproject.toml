@@ -1,0 +1,38 @@
+[project]
+name = "knowledge-graphs"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "asyncpg>=0.31.0",
+    "docx2txt>=0.9",
+    "fastapi[standard]>=0.127.0",
+    "greenlet>=3.3.0",
+    "gunicorn>=23.0.0",
+    "igraph>=1.0.0",
+    "langchain>=0.3.13",
+    "langchain-community>=0.3.13",
+    "langchain-core>=1.2.0",
+    "langchain-google-genai>=4.1.2",
+    "langchain-groq>=0.2.3",
+    "langchain-huggingface>=0.1.2",
+    "langchain-neo4j>=0.2.0",
+    "langchain-ollama>=0.2.2",
+    "langchain-openai>=0.2.14",
+    "langchain-text-splitters>=1.1.0",
+    "leidenalg>=0.10.2",
+    "libmagic>=1.0",
+    "neo4j>=5.28.2",
+    "networkx>=3.6.1",
+    "pandas>=2.3.3",
+    "passlib>=1.7.4",
+    "pdfplumber>=0.11.4",
+    "pydantic>=2.10.6",
+    "python-dotenv>=1.2.1",
+    "python-igraph>=0.11.8",
+    "python-louvain>=0.16",
+    "python-magic>=0.4.27",
+    "sqlalchemy>=2.0.45",
+    "streamlit>=1.40.0",
+]
