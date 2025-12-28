@@ -6,7 +6,7 @@ from langchain_neo4j.graphs.graph_document import GraphDocument
 from langchain_neo4j.graphs.neo4j_graph import Neo4jGraph
 from langchain_neo4j.vectorstores.neo4j_vector import Neo4jVector
 from neo4j import ManagedTransaction
-from typing import List, Optional
+from typing import List, Optional, Tuple
 
 from src.config import KnowledgeGraphConfig
 from src.graph.graph_model import Community, CommunityReport
@@ -613,6 +613,74 @@ class KnowledgeGraph(Neo4jGraph):
             self.update_properties(G, centralities, ld, lv, leiden_mod, louvain_mod)
         except Exception as e:
             logger.warning(f"Something went wrong while updating properties on graph nodes: {e}")
+
+
+    def predict_links(
+        self,
+        method: str = "adamic_adar",
+        top_k: int = 10,
+        entity_only: bool = True
+    ) -> List[Tuple[str, str, float]]:
+        """
+        Predicts missing or future links between entities in the Knowledge Graph.
+        
+        Uses baseline heuristic methods to identify potential relationships between
+        nodes that are not currently connected.
+        
+        Parameters:
+        -----------
+        method : str
+            Link prediction algorithm to use. Options:
+            - 'common_neighbors': Count of shared neighbors
+            - 'jaccard': Jaccard similarity of neighborhoods  
+            - 'adamic_adar': Adamic-Adar index (default, weights rare connections higher)
+            - 'preferential_attachment': Product of node degrees (rich-get-richer)
+        top_k : int
+            Number of top-ranked predictions to return (default: 10)
+        entity_only : bool
+            If True, only predict links between __Entity__ nodes, excluding
+            Document, Chunk, and other metadata nodes (default: True)
+            
+        Returns:
+        --------
+        List[Tuple[str, str, float]]
+            List of (source_id, target_id, score) tuples, ranked by prediction score
+            
+        Example:
+        --------
+        >>> predictions = kg.predict_links(method="adamic_adar", top_k=10)
+        >>> for src, tgt, score in predictions:
+        ...     print(f"{src} -> {tgt}: {score:.4f}")
+        """
+        from src.graph.link_prediction import predict_links as lp_predict_links
+        
+        # Get NetworkX representation of the graph
+        G = self.get_digraph()
+        
+        # Filter to entity nodes if requested
+        node_filter = None
+        if entity_only:
+            # Only consider nodes with __Entity__ label
+            entity_nodes = {
+                node_id for node_id, data in G.nodes(data=True)
+                if BASE_ENTITY_LABEL in data.get("labels", [])
+            }
+            node_filter = entity_nodes
+            logger.info(f"Filtering to {len(entity_nodes)} entity nodes for link prediction")
+        
+        # Run link prediction
+        predictions = lp_predict_links(
+            G=G,
+            method=method,
+            top_k=top_k,
+            exclude_existing=True,
+            node_filter=node_filter
+        )
+        
+        logger.info(f"Generated {len(predictions)} link predictions using {method} method")
+        
+        return predictions
+
 
 
     def get_communities(self, comm_type: str = "leiden") -> List[Community]:
